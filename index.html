@@ -1,0 +1,723 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>GMDS | Registered Shops Control Console</title>
+    
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: { sans: ['Plus Jakarta Sans', 'sans-serif'] },
+                    colors: { 
+                        bgDark: '#04060b', 
+                        surfaceCard: '#0d1222', 
+                        primaryNeon: '#10b981', 
+                        brandPurple: '#6366f1', 
+                        dangerRed: '#f43f5e', 
+                        deepSlate: '#1e293b',
+                        cyberBlack: '#020306',
+                        borderNeon: 'rgba(99, 102, 241, 0.15)'
+                    }
+                }
+            }
+        }
+    </script>
+    
+    <style>
+        /* Strict Mobile View Lock & Global Zoom Prevention Rules */
+        html, body {
+            margin: 0; padding: 0; width: 100%; height: 100%;
+            background-color: #04060b; color: #f8fafc;
+            overflow: hidden; font-family: 'Plus Jakarta Sans', sans-serif;
+            touch-action: manipulation; -webkit-text-size-adjust: 100%;
+        }
+        
+        .mobile-viewport-container {
+            width: 100vw; height: 100vh; max-width: 450px; margin: 0 auto;
+            display: flex; flex-direction: column; position: relative;
+            background: linear-gradient(180deg, #090e1a 0%, #04060b 100%);
+            box-shadow: 0 0 60px rgba(0,0,0,0.9);
+            border-left: 1px solid rgba(255, 255, 255, 0.03); 
+            border-right: 1px solid rgba(255, 255, 255, 0.03);
+            overflow: hidden;
+        }
+
+        * {
+            -webkit-tap-highlight-color: transparent;
+            -webkit-user-select: none; user-select: none;
+            box-sizing: border-box;
+        }
+
+        input {
+            -webkit-user-select: text !important;
+            user-select: text !important;
+        }
+
+        .view-frame { display: none; height: 100%; width: 100%; flex-direction: column; }
+        .view-frame.active { display: flex; animation: viewCascade 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
+        @keyframes viewCascade { from { opacity: 0; transform: translateY(15px); } to { opacity: 1; transform: translateY(0); } }
+
+        .custom-scrollbar { overflow-y: auto; flex: 1; padding-bottom: 24px; width: 100%; overflow-x: hidden; }
+        .custom-scrollbar::-webkit-scrollbar { width: 0px; display: none; }
+
+        .glass-input {
+            background: rgba(13, 18, 34, 0.7);
+            border: 1px solid rgba(255, 255, 255, 0.07);
+            box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.2);
+            transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+        .glass-input:focus {
+            border-color: #6366f1;
+            background: rgba(13, 18, 34, 0.9);
+            box-shadow: 0 0 0 4px rgba(99, 102, 241, 0.15);
+        }
+
+        .premium-neon-card {
+            background: linear-gradient(145deg, #0f1424 0%, #0a0d18 100%);
+            border: 1px solid rgba(255, 255, 255, 0.04);
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+            transition: all 0.3s ease;
+            width: 100%;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="mobile-viewport-container">
+
+        <div id="loadingOverlay" class="absolute inset-0 bg-bgDark/98 z-50 flex flex-col items-center justify-center hidden backdrop-blur-md">
+            <div class="relative flex items-center justify-center mb-5">
+                <div class="animate-ping absolute inline-flex h-14 w-14 rounded-full bg-brandPurple/20 opacity-75"></div>
+                <div class="w-12 h-12 rounded-xl bg-surfaceCard flex items-center justify-center border border-brandPurple/30 shadow-lg">
+                    <i class="fas fa-shield-halved text-xl text-brandPurple animate-pulse"></i>
+                </div>
+            </div>
+            <p class="font-extrabold tracking-widest text-[10px] text-slate-400 uppercase" id="loadingText">Establishing Secure Link...</p>
+        </div>
+
+        <div id="toastNotificationBox" class="absolute bottom-6 left-4 right-4 z-[100000] pointer-events-none flex flex-col gap-2"></div>
+
+        <div id="authGateFrame" class="view-frame active justify-center px-6">
+            <div class="text-center mb-10">
+                <div class="w-20 h-20 bg-gradient-to-tr from-brandPurple to-indigo-600 rounded-3xl flex items-center justify-center text-2xl mx-auto mb-5 shadow-2xl shadow-brandPurple/30 border border-brandPurple/20 relative">
+                    <i class="fas fa-store-lock text-white"></i>
+                    <div class="absolute -bottom-1 -right-1 w-4 h-4 bg-primaryNeon rounded-full border-2 border-bgDark"></div>
+                </div>
+                <h2 class="text-2xl font-black text-white tracking-tight">GMDS Partner Panel</h2>
+                <p class="text-[9px] text-slate-500 uppercase tracking-widest font-extrabold mt-1.5">Registered Shops Core Network</p>
+            </div>
+
+            <div class="space-y-5" style="text-align: left;">
+                <div>
+                    <label class="block font-extrabold text-[9px] text-slate-400 uppercase tracking-widest mb-2 pl-1">Partner Shop / Hotel Name</label>
+                    <input type="text" id="inputHotelName" class="w-full glass-input rounded-xl px-4 py-4 text-xs font-semibold text-white outline-none" placeholder="e.g. Mughal Kitchen Express">
+                </div>
+                <div>
+                    <label class="block font-extrabold text-[9px] text-slate-400 uppercase tracking-widest mb-2 pl-1">Registered Phone Terminal</label>
+                    <input type="tel" id="inputPhone" class="w-full glass-input rounded-xl px-4 py-4 text-xs font-semibold text-white outline-none" placeholder="10-digit smartphone terminal">
+                </div>
+                <div>
+                    <label class="block font-extrabold text-[9px] text-slate-400 uppercase tracking-widest mb-2 pl-1">Secret Access Cipher Passcode</label>
+                    <div class="relative">
+                        <input type="password" id="inputPassword" class="w-full glass-input rounded-xl px-4 py-4 text-xs font-semibold text-white outline-none pr-12" placeholder="••••••••">
+                        <button type="button" id="togglePasswordVisibility" class="absolute right-0 top-0 h-full px-4 flex items-center justify-center text-slate-500 hover:text-white transition-colors border-none bg-transparent cursor-pointer">
+                            <i class="fas fa-eye-slash text-xs" id="eyeIcon"></i>
+                        </button>
+                    </div>
+                </div>
+                
+                <button id="actionLoginBtn" class="w-full py-4 bg-gradient-to-r from-brandPurple to-indigo-600 hover:opacity-90 text-white rounded-xl text-xs font-black uppercase tracking-wider transition-all shadow-xl shadow-brandPurple/20 mt-6 flex items-center justify-center gap-2">Verify Secure Node <i class="fas fa-arrow-right text-[10px]"></i></button>
+            </div>
+        </div>
+
+        <div id="dashboardFrame" class="view-frame">
+            <header class="bg-surfaceCard/90 backdrop-blur-md p-4 border-b border-slate-800/60 flex items-center justify-between shrink-0">
+                <div class="flex items-center gap-3 min-w-0">
+                    <div class="w-9 h-9 rounded-xl bg-gradient-to-br from-brandPurple to-indigo-600 flex items-center justify-center text-white font-black text-xs shadow-md border border-brandPurple/20">GM</div>
+                    <div class="min-w-0" style="text-align: left;">
+                        <h1 class="text-xs font-extrabold tracking-tight text-white uppercase truncate" id="labelEcosystemHotel">Loading Domain Node...</h1>
+                        <p class="text-[8px] text-primaryNeon font-bold tracking-widest uppercase mt-0.5"><i class="fas fa-circle text-[5px] mr-1 animate-pulse"></i> Core Cloud Sync</p>
+                    </div>
+                </div>
+                <button id="actionSignoutBtn" class="w-8 h-8 rounded-xl bg-red-950/20 border border-red-500/20 flex items-center justify-center text-red-400 text-xs hover:bg-red-900 transition-all shadow-sm"><i class="fas fa-power-off"></i></button>
+            </header>
+
+            <div class="bg-cyberBlack px-4 py-3.5 border-b border-slate-800/40 grid grid-cols-2 gap-3 text-left shrink-0">
+                <div class="bg-surfaceCard/40 border border-slate-800/40 p-3 rounded-xl flex items-center justify-between">
+                    <div>
+                        <p class="text-[8px] font-bold text-slate-500 uppercase tracking-wider">Today's Revenue</p>
+                        <p class="text-sm font-black text-primaryNeon mt-0.5">₹<span id="labelAnalyticsSales">0.00</span></p>
+                    </div>
+                    <i class="fas fa-wallet text-slate-700 text-sm"></i>
+                </div>
+                <div class="bg-surfaceCard/40 border border-slate-800/40 p-3 rounded-xl flex items-center justify-between">
+                    <div>
+                        <p class="text-[8px] font-bold text-slate-500 uppercase tracking-wider">Active Batches</p>
+                        <p class="text-sm font-black text-brandPurple mt-0.5"><span id="labelAnalyticsOrders">0</span> Orders</p>
+                    </div>
+                    <i class="fas fa-receipt text-slate-700 text-sm"></i>
+                </div>
+            </div>
+
+            <nav class="bg-bgDark px-3 py-2 border-b border-slate-800/40 flex gap-2 shrink-0">
+                <button id="navTabOrders" class="flex-1 py-3 rounded-xl text-[10px] font-black uppercase tracking-wider flex items-center justify-center gap-2 transition-all bg-brandPurple text-white shadow-lg shadow-brandPurple/20">
+                    <i class="fas fa-receipt"></i> Orders Stream (<span id="badgeLiveCount">0</span>)
+                </button>
+                <button id="navTabInventory" class="flex-1 py-3 rounded-xl text-[10px] font-black uppercase tracking-wider flex items-center justify-center gap-2 transition-all text-slate-400 bg-surfaceCard/40 border border-slate-800/80">
+                    <i class="fas fa-cubes"></i> Menu Assets
+                </button>
+            </nav>
+
+            <div id="stagingTimerBar" class="bg-red-950/80 text-red-400 border-b border-red-500/20 px-4 py-2.5 text-[9px] font-bold tracking-wide flex items-center justify-between hidden shrink-0 animate-pulse">
+                <span><i class="fas fa-hourglass-half mr-1.5"></i> STAGING WORK BUFFER EXPIRES IN:</span>
+                <span id="stagingCountdownDisplay" class="bg-black/50 px-2 py-0.5 rounded font-mono text-xs border border-red-500/10">10:00</span>
+            </div>
+
+            <div class="custom-scrollbar p-4">
+                
+                <div id="sectionOrders" class="space-y-4 block">
+                    <div id="ordersGridAnchor" class="space-y-4 w-full">
+                        </div>
+                </div>
+
+                <div id="sectionInventory" class="space-y-4 hidden">
+                    
+                    <div class="premium-neon-card border border-slate-800/80 p-4 rounded-3xl mb-4 shadow-xl">
+                        <div class="flex flex-col items-center gap-3">
+                            <span class="text-[9px] font-black text-slate-400 uppercase tracking-widest"><i class="fas fa-power-off mr-1 text-brandPurple"></i> Global Shop Live Status</span>
+                            
+                            <div id="giantStoreToggleWrapper" data-status="CLOSED" class="w-full h-16 rounded-2xl flex items-center justify-between p-2 cursor-pointer transition-all duration-300 relative border border-slate-800/80 bg-cyberBlack select-none">
+                                <div id="giantToggleTrackLabel" class="w-full text-center font-black text-xs tracking-widest uppercase transition-all z-10 text-slate-600">CLOSED</div>
+                                <div id="giantToggleKnobBlock" class="w-[48%] h-12 bg-gradient-to-r from-red-600 to-rose-500 rounded-xl flex items-center justify-center text-white font-black text-[10px] uppercase tracking-widest shadow-lg shadow-red-600/20 absolute left-2 transition-all duration-300 transform z-20">
+                                    <i class="fas fa-store-slash mr-1.5"></i> OFF
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="flex items-center justify-between bg-surfaceCard border border-slate-800/50 p-3 rounded-2xl mb-2 shadow-sm w-full">
+                        <span class="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Global Status Node</span>
+                        <button id="actionBatchCommitBtn" class="bg-primaryNeon text-bgDark px-5 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-wider transition-all shadow-lg shadow-primaryNeon/10 border-none cursor-pointer"><i class="fas fa-cloud-arrow-up mr-1"></i> Commit Updates</button>
+                    </div>
+                    
+                    <div id="inventoryTableAnchor" class="space-y-3 w-full">
+                        </div>
+                </div>
+
+            </div>
+        </div>
+
+    </div>
+
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/9.22.1/firebase-app.js";
+        import { getDatabase, ref, onValue, get, set, update } from "https://www.gstatic.com/firebasejs/9.22.1/firebase-database.js";
+
+        const firebaseConfig = {
+            apiKey: "AIzaSyB5QfUxUOZtQnTuGU-PPR-VdBof2ljO1i0",
+            authDomain: "gmds-super-app.firebaseapp.com",
+            databaseURL: "https://gmds-super-app-default-rtdb.asia-southeast1.firebasedatabase.app",
+            projectId: "gmds-super-app",
+            storageBucket: "gmds-super-app.firebasestorage.app",
+            messagingSenderId: "872760042776",
+            appId: "1:872760042776:web:5c64e3a6ce4da6229faa6d",
+            measurementId: "G-MWXBQCHMNW"
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const database = getDatabase(app, firebaseConfig.databaseURL);
+
+        function setSecureSessionCookie(name, val, days = 60) {
+            const date = new Date();
+            date.setTime(date.getTime() + (days * 24 * 60 * 60 * 1000));
+            document.cookie = `${name}=${encodeURIComponent(val)};expires=${date.toUTCString()};path=/;SameSite=Strict;Secure`;
+        }
+
+        function getSecureSessionCookie(name) {
+            const matches = document.cookie.match(new RegExp(`(?:^|; )${name.replace(/([\.$?*|{}\(\)\[\]\\\/\+^])/g, '\\$1')}=([^;]*)`));
+            return matches ? decodeURIComponent(matches[1]) : "";
+        }
+
+        let activeHotelSession = getSecureSessionCookie('gmds_m_hotel') || localStorage.getItem('gmds_m_hotel') || "";
+        let activePhoneSession = getSecureSessionCookie('gmds_m_phone') || localStorage.getItem('gmds_m_phone') || "";
+        let runningOrdersTrackCache = 0;
+        let localMenuBuffer = [];
+        let pristineCloudBackup = [];
+        let targetShopStateBuffer = null;
+
+        let stagingCountdownTimer = null;
+        let stagingExpirationTimestamp = null;
+        const BUFFER_LIFETIME_MS = 10 * 60 * 1000; 
+
+        function triggerToast(msg, status = 'success') {
+            const anchor = document.getElementById('toastNotificationBox');
+            const toast = document.createElement('div');
+            toast.className = `w-full px-4 py-3.5 rounded-xl text-white text-xs font-bold shadow-2xl transition-all duration-300 transform translate-y-4 opacity-0 flex items-center gap-3 border ${status === 'error' ? 'bg-red-950/90 border-red-500/30' : 'bg-surfaceCard/95 border-primaryNeon/30'}`;
+            toast.innerHTML = status === 'error' ? `<i class="fas fa-circle-exclamation text-red-400"></i><span>${msg}</span>` : `<i class="fas fa-circle-check text-primaryNeon"></i><span>${msg}</span>`;
+            anchor.appendChild(toast);
+            setTimeout(() => toast.classList.remove('opacity-0', 'translate-y-4'), 50);
+            setTimeout(() => { toast.classList.add('opacity-0', 'translate-y-4'); setTimeout(() => toast.remove(), 300); }, 3000);
+        }
+
+        function toggleLoader(show, text = "") {
+            const node = document.getElementById('loadingOverlay');
+            if(show) {
+                document.getElementById('loadingText').innerText = text.toUpperCase();
+                node.classList.remove('hidden');
+            } else { node.classList.add('hidden'); }
+        }
+
+        function routeView(targetFrame) {
+            document.getElementById('authGateFrame').style.display = 'none';
+            document.getElementById('dashboardFrame').style.display = 'none';
+            if(targetFrame === 'authGateFrame') {
+                document.getElementById('authGateFrame').style.display = 'flex';
+            } else {
+                document.getElementById('dashboardFrame').style.display = 'flex';
+            }
+        }
+
+        window.switchTab = function(panelId, btn) {
+            if(panelId === 'orders-panel') {
+                document.getElementById('sectionOrders').style.display = 'block';
+                document.getElementById('sectionInventory').style.display = 'none';
+            } else if(panelId === 'menu-panel') {
+                document.getElementById('sectionOrders').style.display = 'none';
+                document.getElementById('sectionInventory').style.display = 'block';
+            }
+        }
+
+        document.getElementById('togglePasswordVisibility').addEventListener('click', () => {
+            const passInput = document.getElementById('inputPassword');
+            const eyeIcon = document.getElementById('eyeIcon');
+            if (passInput.type === 'password') {
+                passInput.type = 'text';
+                eyeIcon.className = 'fas fa-eye text-xs text-primaryNeon';
+            } else {
+                passInput.type = 'password';
+                eyeIcon.className = 'fas fa-eye-slash text-xs text-slate-500';
+            }
+        });
+
+        window.executeSecureLogin = function() {
+            const hName = document.getElementById('inputHotelName').value.trim();
+            const phone = document.getElementById('inputPhone').value.trim();
+            const password = document.getElementById('inputPassword').value.trim();
+
+            if (!hName || phone.length < 10 || !password) {
+                triggerToast("Missing profile credentials parameters!", "error");
+                return;
+            }
+
+            toggleLoader(true, "Verifying System Node...");
+
+            get(ref(database, 'hotel_status')).then((snap) => {
+                const hotelLogs = snap.val() || {};
+                const safeCleanKey = hName.replace(/[^A-Za-z0-9]/g, "");
+
+                if (hotelLogs[safeCleanKey]) {
+                    const dbShopData = hotelLogs[safeCleanKey];
+                    
+                    const firebasePhone = String(dbShopData.phone || '').trim();
+                    const firebasePassword = String(dbShopData.password || '').trim();
+
+                    if (firebasePhone === String(phone) && firebasePassword === String(password)) {
+                        setSecureSessionCookie('gmds_m_hotel', hName);
+                        setSecureSessionCookie('gmds_m_phone', phone);
+                        localStorage.setItem('gmds_m_hotel', hName);
+                        localStorage.setItem('gmds_m_phone', phone);
+                        
+                        activeHotelSession = hName;
+                        activePhoneSession = phone;
+                        triggerToast("Authentication clear!");
+                        bootMerchantDashboardPipeline();
+                    } else {
+                        toggleLoader(false);
+                        triggerToast("Invalid phone terminal or access key!", "error");
+                    }
+                } else {
+                    toggleLoader(false);
+                    triggerToast("Domain unregistered on GMDS database!", "error");
+                }
+            }).catch(() => {
+                toggleLoader(false);
+                triggerToast("Ecosystem backend cloud crash!", "error");
+            });
+        }
+
+        window.executeTerminateSession = function() {
+            document.cookie = "gmds_m_hotel=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;";
+            document.cookie = "gmds_m_phone=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;";
+            localStorage.clear();
+            window.location.reload();
+        }
+
+        function engageStagingCountTimer() {
+            if (stagingCountdownTimer) return; 
+            
+            stagingExpirationTimestamp = Date.now() + BUFFER_LIFETIME_MS;
+            document.getElementById('stagingTimerBar').classList.remove('hidden');
+            
+            stagingCountdownTimer = setInterval(() => {
+                const delta = stagingExpirationTimestamp - Date.now();
+                if (delta <= 0) {
+                    clearInterval(stagingCountdownTimer);
+                    stagingCountdownTimer = null;
+                    document.getElementById('stagingTimerBar').classList.add('hidden');
+                    targetShopStateBuffer = null;
+                    
+                    triggerToast("Staging time window expired! Modifications discarded.", "error");
+                    bootMerchantDashboardPipeline(); 
+                } else {
+                    const mins = Math.floor(delta / 60000);
+                    const secs = Math.floor((delta % 60000) / 1000);
+                    document.getElementById('stagingCountdownDisplay').innerText = `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+                }
+            }, 1000);
+        }
+
+        function terminateStagingCountTimer() {
+            if (stagingCountdownTimer) {
+                clearInterval(stagingCountdownTimer);
+                stagingCountdownTimer = null;
+            }
+            document.getElementById('stagingTimerBar').classList.add('hidden');
+            targetShopStateBuffer = null;
+        }
+
+        function bootMerchantDashboardPipeline() {
+            routeView('dashboardFrame');
+            document.getElementById('labelEcosystemHotel').innerText = activeHotelSession;
+            
+            if(!stagingCountdownTimer) {
+                targetShopStateBuffer = null;
+                toggleLoader(true, "Synchronizing datablocks...");
+            }
+
+            onValue(ref(database, 'all_orders'), (snapshot) => {
+                const rawOrders = snapshot.val() ? Object.values(snapshot.val()) : [];
+                let myHotelFilteredOrders = rawOrders.filter(o => {
+                    return o.items && Array.isArray(o.items) && o.items.some(i => i.hotel && i.hotel.trim().toLowerCase() === activeHotelSession.toLowerCase());
+                });
+
+                myHotelFilteredOrders.sort((a, b) => b.orderId - a.orderId || b.id - a.id);
+                document.getElementById('badgeLiveCount').innerText = myHotelFilteredOrders.length;
+                document.getElementById('labelAnalyticsOrders').innerText = myHotelFilteredOrders.length;
+
+                let cumulativeSales = 0;
+                myHotelFilteredOrders.forEach(order => {
+                    if(order.items) {
+                        order.items.forEach(item => {
+                            if(item.hotel && item.hotel.trim().toLowerCase() === activeHotelSession.toLowerCase()) {
+                                const rate = parseFloat(item.price) || 0;
+                                const qty = parseInt(item.qty) || 0;
+                                cumulativeSales += (rate * qty);
+                            }
+                        });
+                    }
+                });
+                document.getElementById('labelAnalyticsSales').innerText = cumulativeSales.toFixed(2);
+
+                if (myHotelFilteredOrders.length > runningOrdersTrackCache && runningOrdersTrackCache !== 0) {
+                    try {
+                        new Audio('https://assets.mixkit.co/active_storage/sfx/911/911-preview.mp3').play();
+                        triggerToast("📢 Notification: Incoming customer order package received!");
+                    } catch(err) {}
+                }
+                runningOrdersTrackCache = myHotelFilteredOrders.length;
+                compileLiveOrdersInterface(myHotelFilteredOrders);
+            });
+
+            onValue(ref(database, 'hotel_status'), (snapshot) => {
+                const hotelLogs = snapshot.val() || {};
+                const safeCleanKey = activeHotelSession.replace(/[^A-Za-z0-9]/g, "");
+                
+                if (hotelLogs[safeCleanKey] && !stagingCountdownTimer) {
+                    let shopState = "CLOSED"; 
+                    if (typeof hotelLogs[safeCleanKey] === 'object' && hotelLogs[safeCleanKey].status) {
+                        shopState = hotelLogs[safeCleanKey].status;
+                    } else if (typeof hotelLogs[safeCleanKey] === 'string') {
+                        shopState = hotelLogs[safeCleanKey];
+                    }
+                    syncGiantToggleInterfaceState(shopState !== "CLOSED");
+                }
+            });
+
+            onValue(ref(database, 'products'), (snapshot) => {
+                const rawProducts = snapshot.val() ? Object.values(snapshot.val()) : [];
+                pristineCloudBackup = JSON.parse(JSON.stringify(rawProducts)); 
+                
+                if (!stagingCountdownTimer) {
+                    localMenuBuffer = rawProducts.filter(p => p && p.hotel && p.hotel.trim().toLowerCase() === activeHotelSession.toLowerCase());
+                    compileInventoryMatrixView();
+                }
+                toggleLoader(false);
+            });
+        }
+
+        // 🛠️ BUG FIX: Bulletproof attribute-based switch rendering tracker 
+        function syncGiantToggleInterfaceState(isOnline) {
+            const wrapper = document.getElementById('giantStoreToggleWrapper');
+            const label = document.getElementById('giantToggleTrackLabel');
+            const knob = document.getElementById('giantToggleKnobBlock');
+            
+            if(!wrapper || !label || !knob) return;
+            
+            wrapper.setAttribute('data-status', isOnline ? "OPEN" : "CLOSED");
+            
+            if (isOnline) {
+                wrapper.className = "w-full h-16 rounded-2xl flex items-center justify-between p-2 cursor-pointer transition-all duration-300 relative border border-emerald-500/30 bg-emerald-950/10 select-none";
+                label.className = "w-full text-center font-black text-xs tracking-widest uppercase transition-all z-10 text-emerald-500/40";
+                label.innerText = "OPEN";
+                knob.className = "w-[48%] h-12 bg-gradient-to-r from-emerald-500 to-teal-500 rounded-xl flex items-center justify-center text-bgDark font-black text-[10px] uppercase tracking-widest shadow-lg shadow-emerald-500/20 absolute right-2 transition-all duration-300 transform z-20";
+                knob.innerHTML = `<i class="fas fa-store mr-1.5"></i> ON`;
+            } else {
+                wrapper.className = "w-full h-16 rounded-2xl flex items-center justify-between p-2 cursor-pointer transition-all duration-300 relative border border-slate-800 bg-slate-900/40 select-none";
+                label.className = "w-full text-center font-black text-xs tracking-widest uppercase transition-all z-10 text-slate-500/40";
+                label.innerText = "CLOSED";
+                knob.className = "w-[48%] h-12 bg-gradient-to-r from-red-600 to-rose-500 rounded-xl flex items-center justify-center text-white font-black text-[10px] uppercase tracking-widest shadow-lg shadow-red-600/20 absolute left-2 transition-all duration-300 transform z-20";
+                knob.innerHTML = `<i class="fas fa-store-slash mr-1.5"></i> OFF`;
+            }
+        }
+
+        // 🛠️ BUG FIX: Removed flaky knob.innerText checking to prevent toggle loops
+        window.executeGiantToggleOperation = function() {
+            engageStagingCountTimer();
+            const wrapper = document.getElementById('giantStoreToggleWrapper');
+            const currentStatus = wrapper.getAttribute('data-status') || "CLOSED";
+            const isCurrentlyOpen = (currentStatus === "OPEN");
+            
+            const nextState = !isCurrentlyOpen;
+            syncGiantToggleInterfaceState(nextState);
+            targetShopStateBuffer = nextState ? "OPEN" : "CLOSED"; 
+            triggerToast("Shop operational status cached in local staging layer!");
+        }
+        document.getElementById('giantStoreToggleWrapper').addEventListener('click', window.executeGiantToggleOperation);
+
+        function compileLiveOrdersInterface(orders) {
+            const anchor = document.getElementById('ordersGridAnchor');
+            if (orders.length === 0) {
+                anchor.innerHTML = `
+                    <div class="text-center bg-surfaceCard/40 border border-slate-800 p-8 rounded-2xl w-full">
+                        <i class="fas fa-box-open text-2xl text-slate-600 mb-2 block"></i>
+                        <p class="text-[11px] font-bold text-slate-500">Zero active order records logged inside terminal node.</p>
+                    </div>`;
+                return;
+            }
+
+            anchor.innerHTML = orders.map(order => {
+                const mySpecificItems = order.items.filter(i => i.hotel && i.hotel.trim().toLowerCase() === activeHotelSession.toLowerCase());
+                const nestedItemsMarkup = mySpecificItems.map(i => `
+                    <div class="flex justify-between items-center py-2 border-b border-slate-800/20 last:border-0 text-slate-300" style="text-align: left;">
+                        <span class="font-semibold text-xs">${i.name}</span>
+                        <span class="font-black text-brandPurple text-xs">x${i.qty}</span>
+                    </div>`).join('');
+
+                return `
+                    <div class="bg-surfaceCard neon-order-card rounded-2xl p-4 relative overflow-hidden w-full" style="text-align: left;">
+                        <div class="absolute top-0 right-0 bg-brandPurple/10 text-brandPurple text-[8px] font-black px-2.5 py-1 rounded-bl-xl tracking-wider">#${order.orderId || order.id}</div>
+                        <div class="text-[9px] font-bold text-slate-500 mb-1"><i class="far fa-clock mr-1 text-brandPurple"></i>${order.time || 'Time Stream Empty'}</div>
+                        <h4 class="font-bold text-xs text-white mb-3"><i class="fas fa-user-circle text-slate-500 mr-1.5"></i>${order.user || 'Guest Profile'}</h4>
+                        <div class="bg-bgDark/20 px-3 py-1 rounded-xl border border-slate-900 mb-3">${nestedItemsMarkup}</div>
+                        <div class="flex justify-between items-center pt-2 mt-1">
+                            <div>
+                                <span class="px-2 py-0.5 rounded text-[8px] font-black uppercase tracking-wider ${order.payMode === 'ONLINE' ? 'bg-emerald-950 text-primaryNeon border border-primaryNeon/20' : 'bg-amber-950 text-amber-400 border border-amber-500/20'}">${order.payMode || 'COD'}</span>
+                            </div>
+                            <a href="https://wa.me/91${(order.phone || '').replace(/\D/g,'')}" target="_blank" class="bg-emerald-950 text-primaryNeon font-bold px-3.5 py-1.5 rounded-xl text-[10px] border border-primaryNeon/20 transition-all flex items-center gap-1"><i class="fab fa-whatsapp"></i> Customer Chat</a>
+                        </div>
+                    </div>`;
+            }).join('');
+        }
+
+        function compileInventoryMatrixView() {
+            const anchor = document.getElementById('inventoryTableAnchor');
+            if (localMenuBuffer.length === 0) {
+                anchor.innerHTML = `<p class="text-center text-xs text-slate-500 font-bold py-6">No matching catalog items recorded for your shop node name.</p>`;
+                return;
+            }
+
+            anchor.innerHTML = localMenuBuffer.map((p) => {
+                const currentStock = parseInt(p.stock_count) || 0;
+                const isAvailable = currentStock > 0;
+                const priceValue = parseFloat(p.price) || 0;
+                const itemDescription = p.description || '';
+                const imageNodeUrl = p.images && p.images[0] ? p.images[0] : 'https://via.placeholder.com/100';
+
+                return `
+                    <div class="bg-surfaceCard border border-slate-800 rounded-3xl p-4 flex flex-col gap-3.5 shadow-lg w-full" style="text-align: left;">
+                        <div class="flex items-center justify-between gap-3">
+                            <div class="flex items-center gap-3 min-w-0 flex-1">
+                                <div class="relative w-14 h-14 bg-bgDark border border-slate-800/80 rounded-xl overflow-hidden shrink-0" onclick="document.getElementById('hardware-file-injector-${p.id}').click()">
+                                    <img id="asset-preview-node-${p.id}" src="${imageNodeUrl}" class="w-full h-full object-cover" onerror="this.src='https://via.placeholder.com/100'">
+                                    <div class="absolute inset-0 bg-black/50 text-[8px] font-bold flex items-center justify-center opacity-0 hover:opacity-100 transition-opacity"><i class="fas fa-camera"></i></div>
+                                </div>
+                                <input type="file" id="hardware-file-injector-${p.id}').click()" class="hidden" accept="image/*" onchange="window.processHardwareMediaUpload(event, ${p.id})">
+                                <div class="min-w-0 flex-1">
+                                    <h5 class="text-xs font-bold text-white truncate m-0">${p.name}</h5>
+                                    <p class="text-[10px] text-slate-500 mt-0.5 m-0">Unit Specification: <span class="text-slate-300">${p.unit || '1 Serve'}</span></p>
+                                </div>
+                            </div>
+                            <div class="flex items-center gap-2 shrink-0 bg-bgDark border border-slate-800/80 px-2.5 py-1.5 rounded-xl cursor-pointer" onclick="window.toggleBufferStockState(${p.id})">
+                                <span class="text-[8px] font-black tracking-wider ${isAvailable ? 'text-primaryNeon' : 'text-dangerRed'}">${isAvailable ? 'LIVE' : 'OFF'}</span>
+                                <div class="relative w-8 h-4 rounded-full transition-colors duration-200 ${isAvailable ? 'bg-primaryNeon' : 'bg-slate-800'}">
+                                    <div class="absolute top-0.5 left-0.5 w-3 h-3 bg-white rounded-full transition-transform duration-200 shadow-sm ${isAvailable ? 'translate-x-4' : ''}"></div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div>
+                            <label class="block font-bold text-[8px] text-slate-500 uppercase tracking-widest mb-1 pl-1">Item Description</label>
+                            <input type="text" value="${itemDescription}" oninput="window.mutateItemDescriptionTerminal(${p.id}, this.value)" class="w-full bg-bgDark/40 border border-slate-800 focus:border-brandPurple rounded-xl px-3 py-2 text-[11px] font-semibold text-slate-200 outline-none transition-all" placeholder="Enter brief item specifications...">
+                        </div>
+
+                        <div class="flex items-center justify-between bg-bgDark/50 border border-slate-900 px-3 py-2.5 rounded-xl">
+                            <span class="text-[10px] font-bold text-slate-400 uppercase tracking-wider text-slate-400"><i class="fas fa-tags text-brandPurple mr-1"></i> Edit Unit Price</span>
+                            <div class="flex items-center gap-2">
+                                <button onclick="window.mutateItemPriceTerminal(${p.id}, -5)" class="w-9 h-9 bg-surfaceCard active:bg-slate-800 text-white rounded-xl text-xs font-black flex items-center justify-center border border-slate-800 select-none">-5</button>
+                                <div class="flex items-center bg-bgDark border border-slate-800 rounded-xl px-2 max-w-[85px] h-9">
+                                    <span class="text-xs font-bold text-slate-500">₹</span>
+                                    <input type="number" step="0.01" value="${priceValue}" oninput="window.mutateItemPriceTerminal(${p.id}, this.value, true)" class="w-full bg-transparent border-none outline-none font-black text-xs text-primaryNeon text-center py-1">
+                                </div>
+                                <button onclick="window.mutateItemPriceTerminal(${p.id}, 5)" class="w-9 h-9 bg-surfaceCard active:bg-slate-800 text-white rounded-xl text-xs font-black flex items-center justify-center border border-slate-800 select-none">+5</button>
+                            </div>
+                        </div>
+                    </div>`;
+            }).join('');
+        }
+
+        window.processHardwareMediaUpload = function(event, id) {
+            const fileNode = event.target.files[0];
+            if (!fileNode) return;
+
+            engageStagingCountTimer();
+            toggleLoader(true, "Compiling Image Bits...");
+            const mediaStreamReader = new FileReader();
+            mediaStreamReader.onload = function(e) {
+                const base64StringData = e.target.result;
+                const matchIndex = localMenuBuffer.findIndex(p => p.id === id);
+                if (matchIndex !== -1) {
+                    localMenuBuffer[matchIndex].images = [base64StringData];
+                    document.getElementById(`asset-preview-node-${id}`).src = base64StringData;
+                    triggerToast("New item portrait frame cached to staging memory!");
+                }
+                toggleLoader(false);
+            };
+            mediaStreamReader.readAsDataURL(fileNode);
+        }
+
+        window.mutateItemPriceTerminal = function(id, deltaVal, isDirectInput = false) {
+            engageStagingCountTimer();
+            const idx = localMenuBuffer.findIndex(p => p.id === id);
+            if (idx !== -1) {
+                if (isDirectInput) {
+                    if (deltaVal === '') return;
+                    localMenuBuffer[idx].price = parseFloat(deltaVal) || 0;
+                } else {
+                    let currentPrice = parseFloat(localMenuBuffer[idx].price) || 0;
+                    currentPrice += parseFloat(deltaVal);
+                    if (currentPrice < 0) currentPrice = 0;
+                    localMenuBuffer[idx].price = currentPrice;
+                    compileInventoryMatrixView(); 
+                }
+            }
+        }
+
+        window.mutateItemDescriptionTerminal = function(id, textString) {
+            engageStagingCountTimer();
+            const idx = localMenuBuffer.findIndex(p => p.id === id);
+            if (idx !== -1) {
+                localMenuBuffer[idx].description = textString;
+            }
+        }
+
+        window.toggleBufferStockState = function(id) {
+            engageStagingCountTimer();
+            const matchIndex = localMenuBuffer.findIndex(p => p.id === id);
+            if (matchIndex !== -1) {
+                const currentVal = parseInt(localMenuBuffer[matchIndex].stock_count) || 0;
+                localMenuBuffer[matchIndex].stock_count = currentVal > 0 ? 0 : 100;
+                compileInventoryMatrixView();
+            }
+        }
+
+        // 🛠️ BUG FIX: Deep pre-fetches data structure before commit to avoid wiping owner credentials
+        window.commitLocalBufferEcosystemChanges = function() {
+            toggleLoader(true, "Publishing modifications live...");
+            const safeCleanKey = activeHotelSession.replace(/[^A-Za-z0-9]/g, "");
+            const executionPipelinePromise = [];
+
+            if (targetShopStateBuffer !== null) {
+                const statusRef = ref(database, 'hotel_status/' + safeCleanKey);
+                
+                const statusPromise = get(statusRef).then((shopSnapshot) => {
+                    let currentShopObject = shopSnapshot.val();
+                    if (currentShopObject && typeof currentShopObject === 'object') {
+                        // Safe update structure (Preserves name, phone, password, edits only status)
+                        currentShopObject.status = targetShopStateBuffer;
+                        return set(statusRef, currentShopObject);
+                    } else {
+                        // String structure fallback
+                        return set(statusRef, targetShopStateBuffer);
+                    }
+                });
+                executionPipelinePromise.push(statusPromise);
+            }
+
+            // Products list updates
+            pristineCloudBackup.forEach((gp, idx) => {
+                if (gp && gp.hotel && gp.hotel.trim().toLowerCase() === activeHotelSession.toLowerCase()) {
+                    const localMatchedObject = localMenuBuffer.find(lp => lp.id === gp.id);
+                    if (localMatchedObject) {
+                        pristineCloudBackup[idx].stock_count = localMatchedObject.stock_count;
+                        pristineCloudBackup[idx].price = localMatchedObject.price;
+                        pristineCloudBackup[idx].description = localMatchedObject.description || '';
+                        if(localMatchedObject.images) pristineCloudBackup[idx].images = localMatchedObject.images;
+                    }
+                }
+            });
+
+            const productsPromise = set(ref(database, 'products'), pristineCloudBackup);
+            executionPipelinePromise.push(productsPromise);
+
+            Promise.all(executionPipelinePromise).then(() => {
+                terminateStagingCountTimer();
+                triggerToast("Ecosystem asset layers update published live!");
+                toggleLoader(false);
+                bootMerchantDashboardPipeline(); // Forced view refresh sync
+            }).catch(() => {
+                toggleLoader(false);
+                triggerToast("Data synchronization critical fault!", "error");
+            });
+        }
+
+        document.getElementById('actionLoginBtn').addEventListener('click', window.executeSecureLogin);
+        document.getElementById('actionSignoutBtn').addEventListener('click', window.executeTerminateSession);
+        document.getElementById('actionBatchCommitBtn').addEventListener('click', window.commitLocalBufferEcosystemChanges);
+        
+        document.getElementById('navTabOrders').addEventListener('click', (e) => {
+            window.switchTab('orders-panel', e.currentTarget);
+            e.currentTarget.className = "flex-1 py-3 rounded-xl text-[10px] font-black uppercase tracking-wider flex items-center justify-center gap-2 transition-all bg-brandPurple text-white shadow-lg shadow-brandPurple/20";
+            document.getElementById('navTabInventory').className = "flex-1 py-3 rounded-xl text-[10px] font-black uppercase tracking-wider flex items-center justify-center gap-2 transition-all text-slate-400 bg-surfaceCard/40 border border-slate-800/80";
+        });
+        document.getElementById('navTabInventory').addEventListener('click', (e) => {
+            window.switchTab('menu-panel', e.currentTarget);
+            e.currentTarget.className = "flex-1 py-3 rounded-xl text-[10px] font-black uppercase tracking-wider flex items-center justify-center gap-2 transition-all bg-brandPurple text-white shadow-lg shadow-brandPurple/20";
+            document.getElementById('navTabOrders').className = "flex-1 py-3 rounded-xl text-[10px] font-black uppercase tracking-wider flex items-center justify-center gap-2 transition-all text-slate-400 bg-surfaceCard/40 border border-slate-800/80";
+        });
+
+        window.addEventListener('DOMContentLoaded', () => {
+            if (activeHotelSession && activePhoneSession) {
+                bootMerchantDashboardPipeline();
+            } else {
+                routeView('authGateFrame');
+            }
+        });
+    </script>
+</body>
+</html>
